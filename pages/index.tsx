@@ -29,12 +29,25 @@ const Home: NextPage = () => {
             </p>
           </a>
         </Link>
+      </div>
 
+      <div className="flex flex-wrap items-center justify-around max-w-4xl mt-6 max-w-full sm:w-full">
         <Link href="/mint" passHref>
           <a className="p-6 mt-6 text-left border border-secondary hover:border-primary w-96 rounded-xl hover:text-primary focus:text-primary-focus">
             <h3 className="text-2xl font-bold">Mint an NFT &rarr;</h3>
             <p className="mt-4 text-xl">
               Execute a transaction to mint an NFT
+            </p>
+          </a>
+        </Link>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-around max-w-4xl mt-6 max-w-full sm:w-full">
+        <Link href="/nfts" passHref>
+          <a className="p-6 mt-6 text-left border border-secondary hover:border-primary w-96 rounded-xl hover:text-primary focus:text-primary-focus">
+            <h3 className="text-2xl font-bold">All NFTs &rarr;</h3>
+            <p className="mt-4 text-xl">
+              See all of your NFTs here
             </p>
           </a>
         </Link>
