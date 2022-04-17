@@ -7,11 +7,14 @@ import {
   convertFromMicroDenom,
   convertMicroDenomToDenom,
 } from 'util/conversion'
+import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CW_721_METADATA_STARTER_ADDRESS || '';
 const PUBLIC_CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME
 const PUBLIC_STAKING_DENOM = process.env.NEXT_PUBLIC_STAKING_DENOM || 'ujuno'
 
 const Mint: NextPage = () => {
+  const [contractAddress, setContractAddress] = useState<string>(CONTRACT_ADDRESS);
   const { walletAddress, signingClient } = useSigningClient()
   const [balance, setBalance] = useState('')
   const [loadedAt, setLoadedAt] = useState(new Date())
@@ -27,6 +30,7 @@ const Mint: NextPage = () => {
   const [image, setImage] = useState<File>();
   const [imageData, setImageData] = useState('')
   const [name, setName] = useState('')
+  const [tokenId, setTokenId] = useState<number>(0);
 
   useEffect(() => {
     if (!signingClient || walletAddress.length === 0) {
@@ -34,6 +38,20 @@ const Mint: NextPage = () => {
     }
     setError('')
     setSuccess('')
+
+    const main = async () => {
+      const client = await CosmWasmClient.connect(
+        process.env.NEXT_PUBLIC_CHAIN_RPC_ENDPOINT || '',
+      );
+      const allNftsResponse = await client.queryContractSmart(
+        contractAddress,
+        {all_tokens: {}},
+      );
+      const newTokenId = parseInt(allNftsResponse.tokens[0]) + 1;
+      setTokenId(newTokenId);
+    }
+
+    main();
 
     signingClient
       .getBalance(walletAddress, PUBLIC_STAKING_DENOM)
@@ -47,7 +65,7 @@ const Mint: NextPage = () => {
         setError(`Error! ${error.message}`)
         console.log('Error signingClient.getBalance(): ', error)
       })
-  }, [signingClient, walletAddress, loadedAt])
+  }, [signingClient, walletAddress, loadedAt, contractAddress])
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files;
@@ -60,7 +78,46 @@ const Mint: NextPage = () => {
 
 
 
-  const handleMint = (event: MouseEvent<HTMLElement>) => {}
+  const handleMint = (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    setError('')
+    setSuccess('')
+    setLoading(true)
+
+    const extension: Record<string, unknown> = {
+      youtube_url: youtubeUrl,
+      animation_url: animationUrl,
+      background_color: backgroundColor,
+      description: description,
+      external_url: externalUrl,
+      image: image,
+      image_data: imageData,
+      name: name,
+    }
+
+    const mintMsg : Record<string, unknown> = {
+      mint: {
+        token_id: tokenId,
+        owner: walletAddress,
+        token_uri: tokenUri,
+        extension: extension,
+      }
+    }
+
+    signingClient
+      ?.execute(walletAddress, contractAddress, mintMsg)
+      .then((resp) => {
+        console.log("resp", resp);
+        setLoadedAt(new Date());
+        setLoading(false);
+
+      })
+      .catch((error) => {
+        setLoading(false);
+        setError(`Error! ${error.message}`)
+        console.log('Error signingClient.execute(): ', error)
+      })
+  }
 
   return (
     <WalletLoader loading={loading}>
