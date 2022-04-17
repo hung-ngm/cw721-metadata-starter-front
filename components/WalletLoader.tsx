@@ -30,7 +30,7 @@ function WalletLoader({
         <h1 className="text-6xl font-bold">
           Welcome to{" "}
           <a className="link link-primary link-hover" href="https://nextjs.org">
-            Next.js!
+            Juno NFT minter
           </a>
         </h1>
 

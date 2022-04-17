@@ -5,7 +5,7 @@ import { StdFee, Coin } from "@cosmjs/amino";
 import WalletLoader from "components/WalletLoader";
 import { useSigningClient } from "contexts/cosmwasm";
 import {
-  convertMicroDenomToDenom,
+  convertMicroDenomToDenom, 
   convertFromMicroDenom,
   convertDenomToMicroDenom,
 } from "util/conversion";
