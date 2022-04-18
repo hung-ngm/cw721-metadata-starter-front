@@ -6,31 +6,37 @@ import { useSigningClient } from 'contexts/cosmwasm'
 import {
   convertFromMicroDenom,
   convertMicroDenomToDenom,
+  convertDenomToMicroDenom
 } from 'util/conversion'
 import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { coin } from '@cosmjs/launchpad';
+import { StdFee, Coin } from "@cosmjs/amino";
+
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CW_721_METADATA_STARTER_ADDRESS || '';
 const PUBLIC_CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME
 const PUBLIC_STAKING_DENOM = process.env.NEXT_PUBLIC_STAKING_DENOM || 'ujuno'
+const VALIDATOR_ADDRESS = process.env.NEXT_PUBLIC_CW_721_METADATA_VALIDATOR_ADDRESS || '';
 
 const Mint: NextPage = () => {
   const [contractAddress, setContractAddress] = useState<string>(CONTRACT_ADDRESS);
+  const [validatorAddress, setValidatorAddress] = useState<string>(VALIDATOR_ADDRESS);
   const { walletAddress, signingClient } = useSigningClient()
-  const [balance, setBalance] = useState('')
+  const [balance, setBalance] = useState<string>('')
   const [loadedAt, setLoadedAt] = useState(new Date())
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState('')
-  const [error, setError] = useState('')
-  const [tokenUri, setTokenUri] = useState('')
-  const [youtubeUrl, setYoutubeUrl] = useState('')
-  const [animationUrl, setAnimationUrl] = useState('')
-  const [backgroundColor, setBackgroundColor] = useState('')
-  const [description, setDescription] = useState('')
-  const [externalUrl, setExternalUrl] = useState('')
+  const [loading, setLoading] = useState<boolean>(false)
+  const [success, setSuccess] = useState<string>('')
+  const [error, setError] = useState<string>('')
+  const [tokenUri, setTokenUri] = useState<string>('')
+  const [youtubeUrl, setYoutubeUrl] = useState<string>('')
+  const [animationUrl, setAnimationUrl] = useState<string>('')
+  const [backgroundColor, setBackgroundColor] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
+  const [externalUrl, setExternalUrl] = useState<string>('')
   const [image, setImage] = useState<File>();
-  const [imageData, setImageData] = useState('')
-  const [name, setName] = useState('')
-  const [tokenId, setTokenId] = useState<number>(0);
+  const [imageData, setImageData] = useState<string>('')
+  const [name, setName] = useState<string>('')
+  const [tokenId, setTokenId] = useState<string>('');
 
   useEffect(() => {
     if (!signingClient || walletAddress.length === 0) {
@@ -43,12 +49,17 @@ const Mint: NextPage = () => {
       const client = await CosmWasmClient.connect(
         process.env.NEXT_PUBLIC_CHAIN_RPC_ENDPOINT || '',
       );
+      console.log("client", client);
       const allNftsResponse = await client.queryContractSmart(
         contractAddress,
         {all_tokens: {}},
       );
-      const newTokenId = parseInt(allNftsResponse.tokens[0]) + 1;
+      const newTokenId = (parseInt(allNftsResponse.tokens[0]) + 1).toString();
+      console.log(newTokenId);
       setTokenId(newTokenId);
+
+      const a = await client.getAccount(VALIDATOR_ADDRESS);
+      console.log("a", a);
     }
 
     main();
@@ -65,6 +76,7 @@ const Mint: NextPage = () => {
         setError(`Error! ${error.message}`)
         console.log('Error signingClient.getBalance(): ', error)
       })
+      console.log("signing client", signingClient);
   }, [signingClient, walletAddress, loadedAt, contractAddress])
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -76,8 +88,6 @@ const Mint: NextPage = () => {
     setImage(fileList[0]);
   }
 
-
-
   const handleMint = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     setError('')
@@ -85,27 +95,41 @@ const Mint: NextPage = () => {
     setLoading(true)
 
     const extension: Record<string, unknown> = {
-      youtube_url: youtubeUrl,
-      animation_url: animationUrl,
-      background_color: backgroundColor,
-      description: description,
-      external_url: externalUrl,
-      image: image,
-      image_data: imageData,
-      name: name,
+      "youtube_url": youtubeUrl,
+      "animation_url": animationUrl,
+      "background_color": backgroundColor,
+      "description": description,
+      "external_url": externalUrl,
+      "image": "CHANGE THIS",
+      "image_data": imageData,
+      "name": name,
     }
 
     const mintMsg : Record<string, unknown> = {
-      mint: {
-        token_id: tokenId,
-        owner: walletAddress,
-        token_uri: tokenUri,
-        extension: extension,
+      "mint": {
+        "token_id": tokenId,
+        "owner": walletAddress ,
+        "token_uri": tokenUri,
+        "extension": extension,
       }
     }
 
+    console.log("mintMsg", mintMsg);
+
+    const funds: Coin[] = [
+      {
+        amount: convertDenomToMicroDenom(10),
+        denom: PUBLIC_STAKING_DENOM,
+      },
+    ];
+
     signingClient
-      ?.execute(walletAddress, contractAddress, mintMsg)
+      ?.execute(
+        validatorAddress, 
+        contractAddress, 
+        mintMsg,
+        "auto",
+      )
       .then((resp) => {
         console.log("resp", resp);
         setLoadedAt(new Date());
@@ -122,7 +146,6 @@ const Mint: NextPage = () => {
   return (
     <WalletLoader loading={loading}>
       <p className="text-2xl">Your wallet has {balance}</p>
-
       <h1 className="text-5xl font-bold my-8">
         Mint an NFT (with metadata stored on chain)
       </h1>
